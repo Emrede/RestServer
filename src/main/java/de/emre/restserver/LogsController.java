@@ -1,5 +1,8 @@
 package de.emre.restserver;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.mongodb.Block;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
@@ -18,10 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.TimeZone;
+import java.util.*;
 
 import static org.springframework.data.mongodb.core.aggregation.Aggregation.*;
 import static org.springframework.data.mongodb.core.query.Criteria.where;
@@ -57,10 +57,12 @@ public class LogsController {
 
     //This func returns city name and its log counts
     @RequestMapping("/sum")
-    public void sum() {
+    public String sum() {
         ApplicationContext ctx = new AnnotationConfigApplicationContext(SpringMongoConfig.class);
         //MongoOperations mongoOperation = (MongoOperations) ctx.getBean("mongoTemplate");
         MongoTemplate mongoOperation = (MongoTemplate) ctx.getBean("mongoTemplate");
+        List<List<Summary>> listOfSum =  new ArrayList <List<Summary>>();
+        String json = null;
 
 //        Query query = new Query();
 //                long diffInMillies = startDate.getTime() - endDate.getTime();
@@ -81,24 +83,34 @@ public class LogsController {
         }
 //        long sd = startDate.getTime();
 //        long ed = endDate.getTime();
+
         while (startDate.before(endDate)) {
-            Date secondDate = DateUtils.addMinutes(startDate, 2);
+            Date intervalDate = DateUtils.addMinutes(startDate, 2);
 
             Aggregation aggregate = newAggregation(
-                    match(where("date").gt(startDate).lte(secondDate)),
+                    match(where("date").gt(startDate).lte(intervalDate)),
                     group("name").count().as("count"),
                     project("count").and("name").previousOperation()
             );
             AggregationResults<Summary> groupResults = mongoOperation.aggregate(aggregate, "logs", Summary.class);
             List<Summary> result = groupResults.getMappedResults();
+            
+            for (Summary s : result) {
+                s.setDate(startDate);
+                System.out.println(s.getName() + ": " + s.getCount() + " - " + s.getDate());
 
-            for (Summary s : result)
-                System.out.println(s.getName() + ":" + s.getCount() + startDate);
-
+                listOfSum.add(result);
+            }
             startDate = DateUtils.addMinutes(startDate, 2); //add minute
         }
-        return;
+        System.out.println(listOfSum);
+        ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
+        try {
+            json = ow.writeValueAsString(listOfSum);
+            System.out.println(json);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+        return json;
     }
 }
-
-

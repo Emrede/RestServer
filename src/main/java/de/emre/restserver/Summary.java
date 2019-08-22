@@ -12,9 +12,9 @@ public class Summary {
     private int count;
     private Date date;
 
-    public Summary(int count, String name, Date date) {
-        this.count = count;
+    public Summary(String name, int count, Date date) {
         this.name = name;
+        this.count = count;
         this.date = date;
     }
 
