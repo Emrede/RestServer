@@ -5,6 +5,7 @@ import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import org.apache.commons.lang3.time.DateUtils;
 import org.bson.Document;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -20,6 +21,7 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.TimeZone;
 
 import static org.springframework.data.mongodb.core.aggregation.Aggregation.*;
 import static org.springframework.data.mongodb.core.query.Criteria.where;
@@ -52,6 +54,7 @@ public class LogsController {
         logs.add(log2);
         return logs;
     }
+
     //This func returns city name and its log counts
     @RequestMapping("/sum")
     public void sum() {
@@ -61,30 +64,41 @@ public class LogsController {
 
 //        Query query = new Query();
 //                long diffInMillies = startDate.getTime() - endDate.getTime();
-        String dateX = "2019-08-19 22:29:30.874Z";
+
+        String date1 = "2019-08-21 00:00:30.874Z";
+        String date2 = "2019-08-21 17:43:30.874Z";
+
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+        simpleDateFormat.setTimeZone((TimeZone.getTimeZone("GMT")));
+
+        Date startDate = new Date();
         Date endDate = new Date();
         try {
-            endDate = simpleDateFormat.parse(dateX);
+            startDate = simpleDateFormat.parse(date1);
+            endDate = simpleDateFormat.parse(date2);
         } catch (ParseException e) {
             e.printStackTrace();
         }
+//        long sd = startDate.getTime();
+//        long ed = endDate.getTime();
+        while (startDate.before(endDate)) {
+            Date secondDate = DateUtils.addMinutes(startDate, 2);
 
-        Aggregation aggregate = newAggregation(
-                match(where("date").gt(endDate)),
-                group("name").count().as("count"),
-                project("count").and("name").previousOperation()
-        );
-        AggregationResults<Summary> groupResults = mongoOperation.aggregate(aggregate, "logs", Summary.class);
-        List<Summary> result = groupResults.getMappedResults();
-        for (Summary s : groupResults)
-            System.out.println(s.getName() + ":" + s.getCount());
+            Aggregation aggregate = newAggregation(
+                    match(where("date").gt(startDate).lte(secondDate)),
+                    group("name").count().as("count"),
+                    project("count").and("name").previousOperation()
+            );
+            AggregationResults<Summary> groupResults = mongoOperation.aggregate(aggregate, "logs", Summary.class);
+            List<Summary> result = groupResults.getMappedResults();
 
+            for (Summary s : result)
+                System.out.println(s.getName() + ":" + s.getCount() + startDate);
 
+            startDate = DateUtils.addMinutes(startDate, 2); //add minute
+        }
         return;
     }
-
-
 }
 
 
