@@ -62,13 +62,14 @@ public class LogsController {
         //MongoOperations mongoOperation = (MongoOperations) ctx.getBean("mongoTemplate");
         MongoTemplate mongoOperation = (MongoTemplate) ctx.getBean("mongoTemplate");
         List<List<Summary>> listOfSum =  new ArrayList <List<Summary>>();
+        List<String> listOfString = new ArrayList<>();
         String json = null;
 
 //        Query query = new Query();
 //                long diffInMillies = startDate.getTime() - endDate.getTime();
 
         String date1 = "2019-08-21 00:00:30.874Z";
-        String date2 = "2019-08-21 17:43:30.874Z";
+        String date2 = "2019-08-23 17:43:30.874Z";
 
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
         simpleDateFormat.setTimeZone((TimeZone.getTimeZone("GMT")));
@@ -94,23 +95,30 @@ public class LogsController {
             );
             AggregationResults<Summary> groupResults = mongoOperation.aggregate(aggregate, "logs", Summary.class);
             List<Summary> result = groupResults.getMappedResults();
-            
+
+            SimpleDateFormat localDateFormat = new SimpleDateFormat("HH:mm:ss");
+            String time = localDateFormat.format(startDate);
+
             for (Summary s : result) {
                 s.setDate(startDate);
                 System.out.println(s.getName() + ": " + s.getCount() + " - " + s.getDate());
-
-                listOfSum.add(result);
+                listOfString.add(s.getName() + ": " + time + ": " + s.getCount());
+//                listOfSum.add(result);
             }
             startDate = DateUtils.addMinutes(startDate, 2); //add minute
         }
-        System.out.println(listOfSum);
+        System.out.println(listOfString);
         ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
         try {
-            json = ow.writeValueAsString(listOfSum);
+            json = ow.writeValueAsString(listOfString);
             System.out.println(json);
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
-        return json;
+//        String formattedString = json.toString()
+//                .replace("[", "")  //remove the right bracket
+//                .replace("]", "")  //remove the left bracket
+//                .trim();
+        return "{ " + json + " }";
     }
 }
