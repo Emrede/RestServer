@@ -1,5 +1,6 @@
 package de.emre.restserver;
 
+import org.joda.time.DateTime;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -10,9 +11,9 @@ public class Summary {
 
     private String name;
     private int count;
-    private Date date;
+    private DateTime date;
 
-    public Summary(String name, int count, Date date) {
+    public Summary(String name, int count, DateTime date) {
         this.name = name;
         this.count = count;
         this.date = date;
@@ -22,11 +23,11 @@ public class Summary {
         return name;
     }
 
-    public void setDate(Date date) {
+    public void setDate(DateTime date) {
         this.date = date;
     }
 
-    public Date getDate() {
+    public DateTime getDate() {
         return date;
     }
 

@@ -10,6 +10,9 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.apache.commons.lang3.time.DateUtils;
 import org.bson.Document;
+import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.ISODateTimeFormat;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -61,32 +64,33 @@ public class LogsController {
         ApplicationContext ctx = new AnnotationConfigApplicationContext(SpringMongoConfig.class);
         //MongoOperations mongoOperation = (MongoOperations) ctx.getBean("mongoTemplate");
         MongoTemplate mongoOperation = (MongoTemplate) ctx.getBean("mongoTemplate");
-        List<List<Summary>> listOfSum =  new ArrayList <List<Summary>>();
+        List<List<Summary>> listOfSum = new ArrayList<List<Summary>>();
         List<String> listOfString = new ArrayList<>();
         String json = null;
 
 //        Query query = new Query();
 //                long diffInMillies = startDate.getTime() - endDate.getTime();
 
-        String date1 = "2019-08-21 00:00:30.874Z";
-        String date2 = "2019-08-23 17:43:30.874Z";
 
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
-        simpleDateFormat.setTimeZone((TimeZone.getTimeZone("GMT")));
 
-        Date startDate = new Date();
-        Date endDate = new Date();
-        try {
-            startDate = simpleDateFormat.parse(date1);
-            endDate = simpleDateFormat.parse(date2);
-        } catch (ParseException e) {
-            e.printStackTrace();
-        }
+//        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
+//        simpleDateFormat.setTimeZone((TimeZone.getTimeZone("GMT")));
+
+        DateTimeFormatter parser = ISODateTimeFormat.dateTime();
+        String date1 = "2019-08-21T00:00:30.874Z";
+        String date2 = "2019-08-25T19:43:30.874Z";
+
+        DateTime startDate = new DateTime();
+        DateTime endDate = new DateTime();
+
+        startDate = parser.parseDateTime(date1);
+        endDate = parser.parseDateTime(date2);
+
 //        long sd = startDate.getTime();
 //        long ed = endDate.getTime();
 
-        while (startDate.before(endDate)) {
-            Date intervalDate = DateUtils.addMinutes(startDate, 2);
+        while (startDate.isBefore(endDate)) {
+            DateTime intervalDate = startDate.plusMinutes(2);
 
             Aggregation aggregate = newAggregation(
                     match(where("date").gt(startDate).lte(intervalDate)),
@@ -96,29 +100,30 @@ public class LogsController {
             AggregationResults<Summary> groupResults = mongoOperation.aggregate(aggregate, "logs", Summary.class);
             List<Summary> result = groupResults.getMappedResults();
 
-            SimpleDateFormat localDateFormat = new SimpleDateFormat("HH:mm:ss");
-            String time = localDateFormat.format(startDate);
+//            SimpleDateFormat localDateFormat = new SimpleDateFormat("HH:mm:ss");
+//            String time = localDateFormat.format(startDate);
 
             for (Summary s : result) {
                 s.setDate(startDate);
                 System.out.println(s.getName() + ": " + s.getCount() + " - " + s.getDate());
-                listOfString.add(s.getName() + ": " + time + ": " + s.getCount());
+                listOfString.add("\"" + s.getName() + "\": { \"" + startDate + "\": " + s.getCount() + "}");
 //                listOfSum.add(result);
             }
-            startDate = DateUtils.addMinutes(startDate, 2); //add minute
+            startDate = startDate.plusMinutes(2); //add minute
         }
         System.out.println(listOfString);
-        ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
-        try {
-            json = ow.writeValueAsString(listOfString);
-            System.out.println(json);
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        }
-//        String formattedString = json.toString()
-//                .replace("[", "")  //remove the right bracket
-//                .replace("]", "")  //remove the left bracket
-//                .trim();
-        return "{ " + json + " }";
+//        ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
+//        try {
+//            json = ow.writeValueAsString(listOfString);
+//            System.out.println(json);
+//        } catch (JsonProcessingException e) {
+//            e.printStackTrace();
+//        }
+        String formattedString = listOfString.toString()
+                .replace("[", "")  //remove the right bracket
+                .replace("]", "")  //remove the left bracket
+                .trim();
+
+        return "{ " + formattedString + " }";
     }
 }
